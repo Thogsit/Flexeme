@@ -4,6 +4,8 @@
 This project provides several implementations for commit untagling and proposes a new representation of
 git patches by projecting the patch onto a PDG.
 
+**Note: The repository uses git lfs and as such needs it installed when being cloned for correctly fetching the `extractor.zip` file.**
+
 ## Repository Structure
 We provide an artificial corpus and a way of building such corpora in `./tangle_concerns`.
 
@@ -33,17 +35,21 @@ The project depends on the following python packages:
 jsonpickle==1.2    # For data loading and storage
 scipy>=1.3.1       # Used for the Hungarian algorithm when evaluating 3+ untangles
 tqdm>=4.38.0       # Used for progressbars
-networkx>=2.4      # Used for shortest-paths and general graph utils
-numpy>=1.17.3      # Used for matrix operations
+networkx==2.3      # Used for shortest-paths and general graph utils
+numpy<1.19.0       # Used for matrix operations
 rapidfuzz>=0.9.1   # Used for fuzzy string matching
 pygraphviz>=1.6    # Used as the main way to interact with .dot files
-pydot>=1.4.1       # Used as a fall-back method to read .dot files
+pydot==1.4.1       # Used as a fall-back method to read .dot files
 grakel>=0.1a6      # Used for the WL-kernel implementation
 nltk>=3.4.4        # Used for tokenisation
 ```
 
+Due to these package constraints, Python3.8 or lower is required to successfully install `numpy<1.19.0`.
+
 Apart from the python requirements, the extractor requires running in a MS Windows system with .NET 4.5 installed.
 We have not validated this under Wine in Linux. We have validated it to work under WSL1.
+
+**Note: Graphviz installation under Windows has been made a bit easier, see their [docs](https://pygraphviz.github.io/documentation/stable/install.html#windows) for up to date instructions. The following paragraph is outdated.**
 
 To install pygraphviz on Windows, one should apply the patch from [here](https://github.com/Kagami/pygraphviz/commit/fe442dc16accb629c3feaf157af75f67ccabbd6e) to a clone of the repository and install the patched repository using the steps from [here](https://github.com/pygraphviz/pygraphviz/issues/58) pointing to a 64-bit version of graphviz, obtainable from [here](https://ci.appveyor.com/project/ellson/graphviz/build/job/fry9cmn4jfegw13l/artifacts)
 
@@ -85,41 +91,38 @@ latest SHA used for this project:
 |[Ninject](https://github.com/ninject/ninject) | 13656 | 784 | 6a7ed2b|
 |[RestSharp](https://github.com/restsharp/RestSharp) | 16233 | 1440 | b52b9be|
 
-To reconstruct the corpus, one would first `git clone` under `./subject` the project for which they are building it followed by 
+To reconstruct the corpus, one would first `git clone` under `./subjects` the project for which they are building it followed by 
 a `git reset --hard <Last revision>`. With the project in the correct state, one would then use the scripts provided in 
 `./tangle_concerns`.
 
 Let's say we are recreating the data for **Commandline**, and are using WSL1 with Ubuntu to complete this task.
 From the root of the project one would first run:
 ```bash
-[../flexeme] $ python3 tangle_concerns/tangle_by_file.py Commandline
+[../flexeme] $ python3 -m tangle_concerns.tangle_by_file Commandline
 ```
 This should produce the file `./out/Commandline/Commandline_history_filtered_flat.json` which represents 
-all the valid intervals of commits w.r.t. our tangle criteria. Next, one would run:
+all the valid intervals of commits w.r.t. our tangle criteria. 
+
+Before continuing make sure that the `PdgExtractor.exe` file is present at the given location (e.g. by extracting it with `unzip extractor.zip`) **and** executable (e.g. with `chmod +x ./extractor/Release/PdgExtractor.exe`). Then run:
 ```bash
-[../flexeme] $ python3 generate_corpus.py \
+[../flexeme] $ python3 -m generate_corpus \
 ./out/Commandline/Commandline_history_filtered_flat.json \
 ./subjects/Commandline \
-./temp \ # Temporary location used during this process
+/tmp \ # Temporary location used during this process
 0 \ # Thread id numbering starts from this id, used to avoid overlap in ./temp
 12 \ # Number of threads in use
 ./extractor/Release/PdgExtractor.exe  # Location of the PDG Extractor
 ```
 
-The last step creates a δPDG per file, scripts moving forward assume a single file per commit. To obtain that we want to run the following snippet over all generated data:
-```python
-from deltaPDG.Util.merge_deltaPDGs import merge_deltas_for_a_commit
-
-for path_to_commit from all_paths:
-    merged = merge_deltas_for_a_commit(get_pattern_paths('*.cs.dot', path_to_commit))
-    nx.drawing.nx_pydot.write_dot(merged, os.path.join(path_to_commit, 'merged.dot'))
+The last step creates a δPDG per file, scripts moving forward assume a single file per commit. To obtain that we want to run the following script:
+```bash
+[../flexeme] & python3 merge_dots.py Commandline
 ```
-Please mind that later scripts assume the filename `merged.dot`. To generate `all_paths`, one can use the `*_history_filtered_flat.json` previously generated and the following logic: data is always in `./data/corpora/<Project Name>/<first sha in json chain>_<last sha in json chain>/<num commits merged>/`.
 
 Finally, we want to ensure that the data generated reflect the correct number of _surviving_ concerns. To do this we run
 a final script:
 ```bash
-[../flexeme] $ python3 scan_and_clean_corpora.py Commandline
+[../flexeme] $ python3 -m tangle_concerns.scan_and_clean_corpora Commandline
 ```
 
 For convenience, we provide the final result of this process for all our subjects as `./data.zip` [here](https://liveuclac-my.sharepoint.com/:f:/g/personal/ucabpp1_ucl_ac_uk/EkNrHsAyWPZCkhOsXXvERmIBpiraNlREcEEO4keHUFdRhA?e=6vxyCs). Password: `Flexeme_data_2020`.
@@ -129,17 +132,17 @@ To generate the corpus needed to run the diff-regions baseline, one would use th
 One would have to first the `~_history.json` as described above, then generate the main corpus file as so:
 
 ```bash
-[../flexeme] $ python3 ./confidence_voters/Util/generate_corpus_file.py \
+[../flexeme] $ python3 -m confidence_voters.Util.generate_corpus_file \
 <temp folder>
 <Repository 1> \
 ...
 <Repository n>
 ```
 
-For example, for the project Commandline and the temporary folder `./temp`
+For example, for the project Commandline and the temporary folder `/tmp`
 
 ```bash
-[../flexeme] $ python3 ./confidence_voters/Util/generate_corpus_file.py ./temp Commandline
+[../flexeme] $ python3 confidence_voters.Util.generate_corpus_file /tmp Commandline
 ```
 
 This corpus will not have correct concept numbers if used directly, so one should then run:
@@ -195,7 +198,7 @@ To re-run our evaluation consider the following scripts:
 
 1. To run the Herzig et al. reimplementation:
 ```bash
-[../flexeme] $ python3 ./Util/cv_evaluation_driver.py \
+[../flexeme] $ python3 -m Util.cv_evaluation_driver \
 <number of repeats for timing> \
 <csv filename> \
 false \
@@ -211,7 +214,7 @@ false \
 ```
 For example for Commandline, with all confidence voters being used and all edges maintained (the paper setting):
 ```bash
-[../flexeme] $ python3 ./Util/cv_evaluation_driver.py \
+[../flexeme] $ python3 -m Util.cv_evaluation_driver \
 10 \
 bl_results_fd_cd_d_ns_cc_ \
 false \
@@ -226,7 +229,7 @@ Commandline
 
 2. To run our adaptation of Herzig et al.'s method to work on our proposed 𝛿-PDG:
 ```bash
-[../flexeme] $ python3 ./Util/cv_evaluation_driver.py \
+[../flexeme] $ python3 -m Util.cv_evaluation_driver \
 <number of repeats for timing> \
 <csv filename> \
 true \
@@ -236,12 +239,12 @@ true \
 ```
 For example for Commandline, with all confidence voters being used and all edges maintained (the paper setting):
 ```bash
-[../flexeme] $ python3 ./Util/cv_evaluation_driver.py 10 bl_graph true Commandline
+[../flexeme] $ python3 -m Util.cv_evaluation_driver 10 bl_graph true Commandline
 ```
 
 3. To run the Barnett et al. reimplementation:
 ```bash
-[../flexeme] $ python3 ./Util/graph_evaluation_driver.py \
+[../flexeme] $ python3 -m Util.graph_evaluation_driver \
 <number of repeats for timing> \
 du
 <Repository 1> \
@@ -250,12 +253,12 @@ du
 ```
 For example for Commandline
 ```bash
-[../flexeme] $ python3 ./Util/graph_evaluation_driver.py 10 du Commandline
+[../flexeme] $ python3 -m Util.graph_evaluation_driver 10 du Commandline
 ```
 
-4. To run the our proposed method:
+4. To run our proposed method:
 ```bash
-[../flexeme] $ python3 ./Util/graph_evaluation_driver.py \
+[../flexeme] $ python3 -m Util.graph_evaluation_driver \
 <number of repeats for timing> \
 wl
 <Repository 1> \
@@ -264,7 +267,7 @@ wl
 ```
 For example for Commandline
 ```bash
-[../flexeme] $ python3 ./Util/graph_evaluation_driver.py 10 wl Commandline
+[../flexeme] $ python3 -m Util.graph_evaluation_driver 10 wl Commandline
 ```
 
 For convenience, we provide the evaluation results as `./out.zip` [here](https://drive.proton.me/urls/X24M2QRET0#QjZGicvgWOTw). Password: `Flexeme_data_2020`.
