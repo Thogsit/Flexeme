@@ -32,16 +32,17 @@ We provide our evaluation analysis scripts under `./analysis` as a jupyter noteb
 The project depends on the following python packages:
 
 ```
-jsonpickle==1.2    # For data loading and storage
+jsonpickle==1.2    # Used for data loading and storage
 scipy>=1.3.1       # Used for the Hungarian algorithm when evaluating 3+ untangles
 tqdm>=4.38.0       # Used for progressbars
 networkx==2.3      # Used for shortest-paths and general graph utils
-numpy<1.19.0       # Used for matrix operations
+numpy<1.20.0       # Used for matrix operations
 rapidfuzz>=0.9.1   # Used for fuzzy string matching
 pygraphviz>=1.6    # Used as the main way to interact with .dot files
 pydot==1.4.1       # Used as a fall-back method to read .dot files
-grakel>=0.1a6      # Used for the WL-kernel implementation
+grakel>=0.1.8      # Used for the WL-kernel implementation
 nltk>=3.4.4        # Used for tokenisation
+scikit-learn<1.2.0 # Dependency of grakel
 ```
 
 Due to these package constraints, Python3.8 or lower is required to successfully install `numpy<1.19.0`.
@@ -261,13 +262,14 @@ For example for Commandline
 [../flexeme] $ python3 -m Util.graph_evaluation_driver \
 <number of repeats for timing> \
 wl
+<number of k hops>
 <Repository 1> \
 ...
 <Repository n>
 ```
 For example for Commandline
 ```bash
-[../flexeme] $ python3 -m Util.graph_evaluation_driver 10 wl Commandline
+[../flexeme] $ python3 -m Util.graph_evaluation_driver 10 wl 1 Commandline
 ```
 
 For convenience, we provide the evaluation results as `./out.zip` [here](https://drive.proton.me/urls/X24M2QRET0#QjZGicvgWOTw). Password: `Flexeme_data_2020`.
