@@ -1,12 +1,16 @@
 import datetime
 import json
 import sys
+import os
 from collections import defaultdict
 from typing import List, Tuple, Any
 
 import numpy as np
 
 from deltaPDG.Util.git_util import Git_Util
+
+# Settings
+TEMP_DIR = '/tmp'
 
 KEYWORDS = {'FIX', 'FIXES', 'FIXED', 'IMPLEMENTS', 'IMPLEMENTED', 'IMPLEMENT', 'BUG', 'FEATURE', }
 
@@ -126,6 +130,7 @@ def tangle_by_file(subject, temp_loc):
 
 if __name__ == '__main__':
     repository_name = sys.argv[1]
-    history_flat = tangle_by_file('./subjects/%s' % repository_name, 'D:\\Temp')
+    history_flat = tangle_by_file('./subjects/%s' % repository_name, TEMP_DIR)
+    os.makedirs('out/%s/' % (repository_name), exist_ok=True)
     with open('out/%s/%s_history_filtered_flat.json' % (repository_name, repository_name), 'w') as f:
         f.write(json.dumps(history_flat))
