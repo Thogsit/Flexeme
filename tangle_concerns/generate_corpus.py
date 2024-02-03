@@ -69,15 +69,15 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
     with git_handler as gh:
         v1 = gh.move_git_repo_to_tmp(subject_location)
         v2 = gh.move_git_repo_to_tmp(subject_location)
-        os.makedirs('./temp/%d' % id_, exist_ok=True)
+        os.makedirs(temp_loc + '/%d' % id_, exist_ok=True)
         v1_pdg_generator = PDG_Generator(extractor_location=extractor_location,
                                          repository_location=v1,
                                          target_filename='before_pdg.dot',
-                                         target_location='./temp/%d' % id_)
+                                         target_location=temp_loc + '/%d' % id_)
         v2_pdg_generator = PDG_Generator(extractor_location=extractor_location,
                                          repository_location=v2,
                                          target_filename='after_pdg.dot',
-                                         target_location='./temp/%d' % id_)
+                                         target_location=temp_loc + '/%d' % id_)
         for chain in work:
             print('Working on chain: %s' % str(chain))
             from_ = chain[0]
@@ -110,9 +110,9 @@ def worker(work, subject_location, id_, temp_loc, extractor_location):
                         except FileNotFoundError:
                             v1_pdg_generator(filename)
                             v2_pdg_generator(filename)
-                            delta_gen = deltaPDG('./temp/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
+                            delta_gen = deltaPDG(temp_loc + '/%d/before_pdg.dot' % id_, m_fuzziness=method_fuzziness,
                                                  n_fuzziness=node_fuzziness)
-                            delta_pdg = delta_gen('./temp/%d/after_pdg.dot' % id_,
+                            delta_pdg = delta_gen(temp_loc + '/%d/after_pdg.dot' % id_,
                                                   [ch for ch in changes if ch[1] == filename])
                             delta_pdg = mark_originating_commit(delta_pdg, mark_origin(changes, labeli_changes), filename)
                             os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -132,6 +132,8 @@ if __name__ == '__main__':
     n_workers = int(sys.argv[5])
     temp_loc = sys.argv[3]
     extractor_location = sys.argv[6]
+
+    os.makedirs(temp_loc, exist_ok=True)
 
     try:
         with open(json_location) as f:
